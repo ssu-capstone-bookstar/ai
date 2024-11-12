@@ -1,10 +1,11 @@
 from sqlalchemy import Column, Integer, String, DateTime, Float, Enum, BigInteger, ForeignKey, Boolean
 from sqlalchemy.types import LargeBinary
-from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship, declarative_base
+#from sqlalchemy.ext.declarative import declarative_base
 from enum import Enum as PyEnum
 import torch
 import torch.nn as nn
+from datetime import datetime
 
 Base = declarative_base()
 
@@ -76,6 +77,8 @@ class Member(Base):
 
     # Relationship to MemberBook
     member_books = relationship('MemberBook', back_populates='member')
+    # Member와 UserKeyword 관계 설정
+    user_keywords = relationship('UserKeyword', back_populates='user')  # 이 유저가 저장한 키워드들
 
     # Relationship to Recommending (who recommended)
     recommending_books_from = relationship('Recommending', foreign_keys='Recommending.recommender_id', back_populates='recommender')
@@ -144,3 +147,20 @@ class RecommenderModel(nn.Module):
         x = torch.relu(self.fc2(x))
         x = torch.sigmoid(self.fc3(x))
         return x
+    
+# UserKeyword 테이블 (유저가 저장한 키워드 정보)
+class UserKeyword(Base):
+    __tablename__ = 'userkeyword'
+    
+    id = Column(BigInteger, primary_key=True, autoincrement=True)  # 키워드 ID
+    user_id = Column(BigInteger, ForeignKey('member.id'), nullable=False)  # 유저 ID (Member 모델과 관계)
+    keyword = Column(String(255), nullable=False)  # 키워드
+    frequency = Column(Integer, default=1)  # 키워드 빈도수
+    created_date = Column(DateTime, default=datetime.utcnow)  # 생성 일자
+    updated_date = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)  # 수정 일자
+
+    # Relationships
+    user = relationship('Member', back_populates='user_keywords')  # Member 모델과 관계 설정
+
+    def __repr__(self):
+        return f"<UserKeyword(user_id={self.user_id}, keyword={self.keyword}, frequency={self.frequency})>"

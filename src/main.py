@@ -1,12 +1,14 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 from models import Member, MemberBook, Book, Recommending, RecommendingBook
+from wordcloud_utils import extract_keywords, update_user_keywords, create_wordcloud
 from schemas import UserRequest
 from db_connection import get_db
 from recommendation import recommend_books  
 import logging
-
+from fastapi.responses import JSONResponse
 logging.basicConfig(level=logging.INFO)
+
 app = FastAPI()
 
 @app.post("/recommend_books")
@@ -43,3 +45,19 @@ async def get_recommendations(user: UserRequest, db: Session = Depends(get_db)):
     except Exception as e:
         logging.error(f"Error in get_recommendations: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/wordcloud-image")
+async def wordcloud_image(user_id: int, image_url: str, db: Session = Depends(get_db)):
+    
+    # 1. 이미지를 통해 키워드 추출
+    keywords = extract_keywords(image_url)
+    
+    # 2. 추출된 키워드 데이터베이스에 저장
+    update_user_keywords(user_id, keywords, db)
+    
+    # 3. 새로운 키워드를 바탕으로 워드 클라우드 생성
+    image_url = create_wordcloud(user_id, db)
+    
+    # 4. 워드 클라우드 이미지 URL 반환
+    return {"wordcloud_url": image_url}

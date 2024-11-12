@@ -116,3 +116,15 @@ class UserRequest(BaseModel):
 
     class Config:
         from_attributes = True 
+
+
+class UserKeyword(BaseModel):
+    id: int
+    user_id: int  # 사용자의 ID
+    keyword: str  # 키워드
+    frequency: int = 1 # 키워드 빈도수 
+    created_date: datetime  # 생성 일자
+    updated_date: datetime  # 수정 일자
+
+    class Config:
+        from_attributes = True
