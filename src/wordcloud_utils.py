@@ -18,7 +18,7 @@ from easyocr import Reader
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
 AWS_REGION = os.getenv("AWS_REGION", "ap-northeast-2")
-BUCKET_NAME = os.getenv("BUCKET_NAME", "database1")
+BUCKET_NAME = os.getenv("BUCKET_NAME", "wordcloudforsave")
 
 s3_client = boto3.client(
     "s3",
@@ -32,10 +32,15 @@ font_path = "C:\\Users\\kelly\\Documents\\AI\\nanum-all\\NanumGothic.ttf"
 
 # 텍스트 전처리
 def preprocess_text(text):
-    text = re.sub(r'[^\w\s]', '', text)  # 특수문자 제거
+    text = re.sub(r'[^\w\sㄱ-ㅎㅏ-ㅣ가-힣]', '', text)  # 특수문자 제거
     tokens = text.lower().split()  # 소문자화 및 단어 분리
-    stopwords = {"은", "는", "이", "가", "의", "에"}  # 불용어
-    return [word for word in tokens if word not in stopwords]
+    stopwords = {"은", "는", "이", "가", "의", "에","을","에서", "도", "로", "으로", "와", "과", "한", "하다", "들","위한","으로부터","라도"}  # 불용어
+    return [
+        word for word in tokens
+        if word not in stopwords           # 불용어 제거
+        and not word.isdigit()            # 숫자 제거
+        and not re.fullmatch(r'[a-z]', word)  # 한 글자 영어 제거
+    ]
 
 # OCR을 통해 텍스트 추출
 def extract_keywords(image_url: str):
@@ -44,11 +49,12 @@ def extract_keywords(image_url: str):
     image_bytes = BytesIO(response.content)
     
     # 이미지를 OpenCV 형식으로 변환 (easyocr는 numpy array를 받음)
-    image_np = np.array(bytearray(image_bytes.read()), dtype=np.uint8)
+    image_np = np.frombuffer(image_bytes.getvalue(), dtype=np.uint8)
+    #image_np = np.array(bytearray(image_bytes.read()), dtype=np.uint8)
     image = cv2.imdecode(image_np, cv2.IMREAD_COLOR)
     
     # EasyOCR 리더 초기화
-    ocr = Reader(['en'])  # 영어 OCR 리더 초기화
+    ocr = Reader(['en','ko'])  # 영어 OCR 리더 초기화
     
     # OCR로 텍스트 추출
     extracted_text = ocr.readtext(image, detail=0)
@@ -87,12 +93,22 @@ def create_wordcloud(user_id: int, db: Session):
         tmp_file_path,
         BUCKET_NAME,
         s3_file_name,
-        ExtraArgs={"ACL": "public-read"}
+        #ExtraArgs={"ACL": "public-read"}
     )
 
     # 로컬 임시 파일 삭제
     os.remove(tmp_file_path)
 
-    # 업로드된 이미지 URL 반환
-    image_url = f"https://{BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com/{s3_file_name}"
+    # Pre-signed URL 생성
+    def generate_presigned_url(bucket_name, object_key, expiration=3600):
+        try:
+            url = s3_client.generate_presigned_url('get_object',
+                                                   Params={'Bucket': bucket_name, 'Key': object_key},
+                                                   ExpiresIn=expiration)
+            return url
+        except Exception as e:
+            return str(e)
+    
+    # Pre-signed URL 반환
+    image_url = generate_presigned_url(BUCKET_NAME, s3_file_name)
     return image_url

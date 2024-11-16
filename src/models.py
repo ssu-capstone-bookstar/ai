@@ -1,7 +1,6 @@
 from sqlalchemy import Column, Integer, String, DateTime, Float, Enum, BigInteger, ForeignKey, Boolean
 from sqlalchemy.types import LargeBinary
 from sqlalchemy.orm import relationship, declarative_base
-#from sqlalchemy.ext.declarative import declarative_base
 from enum import Enum as PyEnum
 import torch
 import torch.nn as nn
@@ -59,9 +58,6 @@ class Book(Base):
 
     # Relationship to MemberBook
     member_books = relationship('MemberBook', back_populates='book')
-    # Relationship to RecommendingBook
-    recommending_books = relationship('RecommendingBook', back_populates='book')
-
 # Member 테이블
 class Member(Base):
     __tablename__ = 'member'
@@ -79,11 +75,6 @@ class Member(Base):
     member_books = relationship('MemberBook', back_populates='member')
     # Member와 UserKeyword 관계 설정
     user_keywords = relationship('UserKeyword', back_populates='user')  # 이 유저가 저장한 키워드들
-
-    # Relationship to Recommending (who recommended)
-    recommending_books_from = relationship('Recommending', foreign_keys='Recommending.recommender_id', back_populates='recommender')
-    # Relationship to Recommending (who was recommended)
-    recommended_books = relationship('Recommending', foreign_keys='Recommending.recommended_id', back_populates='recommended')
 
 # MemberBook 테이블 (유저가 읽은 책 정보)
 class MemberBook(Base):
@@ -103,36 +94,6 @@ class MemberBook(Base):
 
     member = relationship('Member', back_populates='member_books')
     book = relationship('Book', back_populates='member_books')
-
-# Recommending 테이블 (추천한 유저와 추천받은 유저 간의 관계)
-class Recommending(Base):
-    __tablename__ = 'recommending'
-    
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
-    created_date = Column(DateTime)
-    updated_date = Column(DateTime)
-    recommender_id = Column(BigInteger, ForeignKey('member.id'))  # 추천한 사람
-    recommended_id = Column(BigInteger, ForeignKey('member.id'))  # 추천받은 사람
-    
-    # Relationships
-    recommender = relationship('Member', foreign_keys=[recommender_id], back_populates='recommending_books_from')
-    recommended = relationship('Member', foreign_keys=[recommended_id], back_populates='recommended_books')
-    recommending_books = relationship('RecommendingBook', back_populates='recommending')
-
-# RecommendingBook 테이블 (추천된 책에 대한 정보)
-class RecommendingBook(Base):
-    __tablename__ = 'recommending_book'
-    
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
-    book_id = Column(BigInteger, ForeignKey('book.book_id'))  # 추천된 책
-    recommending_id = Column(BigInteger, ForeignKey('recommending.id'))  # 추천 관계 ID
-    created_date = Column(DateTime)
-    updated_date = Column(DateTime)
-    
-    # Relationships
-    book = relationship('Book', back_populates='recommending_books')
-    recommending = relationship('Recommending', back_populates='recommending_books')
-
 
 # PyTorch 모델 정의
 class RecommenderModel(nn.Module):

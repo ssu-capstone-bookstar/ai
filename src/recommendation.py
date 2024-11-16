@@ -9,8 +9,7 @@ import torch
 import torch.nn as nn
 from sklearn.neighbors import NearestNeighbors
 import logging
-from models import Book, Member, MemberBook, Recommending, RecommendingBook, ReadingStatus, BookCategory, RecommenderModel
-
+from models import Book, Member, MemberBook, ReadingStatus, BookCategory, RecommenderModel
 def create_user_item_matrix(db: Session, user_id: int):
     users_books = db.query(Member.id, MemberBook.book_id).join(MemberBook, Member.id == MemberBook.member_id).all()
     user_data = {}
@@ -111,7 +110,7 @@ def get_similar_users(db: Session, read_list: List[str], user_id: int, num_simil
     return [user_ids[idx] for idx in indices.flatten() if idx != current_user_index][:num_similar_users]
 
 
-def recommend_books(db: Session, user_id: int, read_list: List[str], want_list: List[str], num_recommendations=10):
+def recommend_books(db: Session, user_id: int, read_list: List[str], want_list: List[str], num_recommendations):
     books = db.query(Book).all()
     if not books:
         logging.error("No books found in the database.")

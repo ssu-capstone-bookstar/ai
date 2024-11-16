@@ -73,31 +73,6 @@ class MemberBook(BaseModel):
         from_attributes = True  
 
 
-
-class Recommending(BaseModel):
-    id: int
-    recommender_id: int
-    recommended_id: int
-    created_date: Optional[datetime] = None
-    updated_date: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True  
-
-
-
-class RecommendingBook(BaseModel):
-    id: int
-    book_id: int
-    recommending_id: int
-    created_date: Optional[datetime] = None
-    updated_date: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True  
-
-
-
 class RecommendationResult(BaseModel):
     book_id: int
     title: str
