@@ -118,29 +118,21 @@ def recommend_books(db: Session, user_id: int, read_list: List[str], want_list: 
     
     df = pd.DataFrame([{"book_id": book.book_id, "title": book.title, "author": book.author, "book_category": book.book_category} for book in books])
     
-        # NumPy 버전 확인
-    print("NumPy version:", np.__version__)
 
-    # PyTorch 버전 확인
-    print("PyTorch version:", torch.__version__)
-
-    # 2. 초기 추천 책이 없는 경우 랜덤 선택
     if not read_list and not want_list:
         random_books = random.sample(range(len(df)), min(num_recommendations, len(df)))
         return df.iloc[random_books][["book_id", 'title', 'author', 'book_category']].to_dict(orient='records')
 
-    # 3. 카테고리 및 저자 정보 획득
     read_categories = get_user_preference_categories(db, read_list)
     want_categories = get_user_preference_categories(db, want_list)
 
-    # 4. 사용자 선호 카테고리 점수 합산 (읽은 책과 원하는 책의 카테고리 점수 합산)
     total_categories = defaultdict(float, read_categories) 
     for category, score in want_categories.items():
         total_categories[category] += score 
     
     logging.info(f"Total categories after merging read and want categories: {total_categories}")
 
-    # 4. 유사 사용자 기반 추천 책 선택
+    # 유사 사용자 기반 추천 책 선택
     similar_users = get_similar_users(db, read_list, user_id)
     potential_recommendations = set()
     if similar_users:
@@ -151,7 +143,7 @@ def recommend_books(db: Session, user_id: int, read_list: List[str], want_list: 
 
     logging.info(f"Potential recommendations (based on similar users): {potential_recommendations}")
 
-    # 5. 카테고리와 저자 가중치 계산
+    # 카테고리와 저자 가중치 계산
     df['weight'] = df['book_category'].apply(lambda x: calculate_category_weight(x, total_categories) if pd.notna(x) else 0)
     df['author_weight'] = df['author'].apply(lambda x: calculate_author_weight(x, books, read_list, want_list))
     logging.info(f"Author weights: {df[['author', 'author_weight']]}")
@@ -160,14 +152,14 @@ def recommend_books(db: Session, user_id: int, read_list: List[str], want_list: 
     logging.info(f"Author weights: {df[['author', 'author_weight']].head()}")
     logging.info(f"Total weights: {df[['book_id', 'title', 'total_weight']].nlargest(5, 'total_weight')}")
 
-    # 6. 잠재 추천 책 DataFrame 생성 및 상위 권수 선택
+    # 잠재 추천 책 DataFrame 생성, 상위 권수 선택
     if potential_recommendations:
         df_potential = df[df['book_id'].isin(potential_recommendations)]
         recommend_titles = pd.concat([df_potential, df.nlargest(num_recommendations, 'total_weight')]).drop_duplicates()
     else:
         recommend_titles = df.nlargest(num_recommendations, 'total_weight')
 
-    # 7. PyTorch 추천 책과 결합
+    # PyTorch 추천 책과 결합
     user_item_matrix, user_ids, all_books = create_user_item_matrix(db, user_id)
     model = train_model(user_item_matrix)
     user_id_index = user_ids.index(user_id)
@@ -176,15 +168,14 @@ def recommend_books(db: Session, user_id: int, read_list: List[str], want_list: 
     pytorch_recommendations_df = df[df['book_id'].isin(pytorch_recommendations)]
     final_recommendations = pd.concat([recommend_titles, pytorch_recommendations_df]).drop_duplicates()
 
-    # 8. 중복 제거 및 읽은 책 제외
+   
     final_recommendations = final_recommendations[~final_recommendations['book_id'].isin(read_list)].head(num_recommendations)
 
-    # 9. 부족한 추천 책 수를 채우기 위해 추가
     if len(final_recommendations) < num_recommendations:
         remaining_books = df[~df['book_id'].isin(final_recommendations['book_id']) & ~df['book_id'].isin(read_list)]
         additional_titles = remaining_books.sample(n=num_recommendations - len(final_recommendations), random_state=1)
         final_recommendations = pd.concat([final_recommendations, additional_titles])
 
-    # 10. 최종 추천 목록 반환
+    # 최종 추천 
     final_recommendations = final_recommendations.head(num_recommendations)
     return final_recommendations[['book_id', 'title', 'author', 'book_category']].to_dict(orient='records')
