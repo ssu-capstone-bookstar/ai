@@ -1,6 +1,4 @@
-import boto3
-import os
-import re
+import boto3, os, re, requests, cv2, pytesseract, random
 from collections import Counter
 from wordcloud import WordCloud
 from tempfile import NamedTemporaryFile
@@ -9,106 +7,184 @@ import easyocr
 from models import UserKeyword
 from datetime import datetime
 from io import BytesIO
-import requests
 import numpy as np
-import cv2
-from easyocr import Reader
+from easyocr import Reader 
+from konlpy.tag import Okt
+from nltk.util import ngrams
+from typing import List
+from sklearn.feature_extraction.text import TfidfVectorizer
+from matplotlib import colors as mcolors
 
+okt = Okt()
 # AWS S3 환경 설정
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
 AWS_REGION = os.getenv("AWS_REGION", "ap-northeast-2")
 BUCKET_NAME = os.getenv("BUCKET_NAME", "wordcloudforsave")
-
+pytesseract.pytesseract.tesseract_cmd = r"C:\\Program Files\\Tesseract-OCR\\tesseract.exe" #윈도우에서만 추가 필요 
 s3_client = boto3.client(
     "s3",
     aws_access_key_id=AWS_ACCESS_KEY_ID,
     aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
     region_name=AWS_REGION,
 )
-
-ocr = easyocr.Reader(['ko', 'en'])
+ocr = easyocr.Reader(['ko'],gpu=False)
 font_path = "C:\\Users\\kelly\\Documents\\AI\\nanum-all\\NanumGothic.ttf"
+stopwords = {"은", "는", "이", "가", "의", "에", "을", "에서", "도", "로", "으로", "와", "과", 
+             "한", "하다", "들", "위한", "으로부터", "라도", "하고", "그리고", "때문에", "하지만","싶다","달리","어단","어름","않는","않은"}
 
-# 텍스트 전처리
 def preprocess_text(text):
-    text = re.sub(r'[^\w\sㄱ-ㅎㅏ-ㅣ가-힣]', '', text)  # 특수문자 제거
-    tokens = text.lower().split()  # 소문자화 및 단어 분리
-    stopwords = {"은", "는", "이", "가", "의", "에","을","에서", "도", "로", "으로", "와", "과", "한", "하다", "들","위한","으로부터","라도"}  # 불용어
-    return [
-        word for word in tokens
-        if word not in stopwords           # 불용어 제거
-        and not word.isdigit()            # 숫자 제거
-        and not re.fullmatch(r'[a-z]', word)  # 한 글자 영어 제거
-    ]
+    text = re.sub(r'[^\w\sㄱ-ㅎㅏ-ㅣ가-힣]', '', text)
+    tokens = okt.pos(text, norm=False, stem=False)
+    print("Tokens:", tokens)  # 분석된 토큰 확인
 
-# OCR을 통해 텍스트 추출
-def extract_keywords(image_url: str):
-    # 이미지 다운로드
+    allowed_pos = {"Noun", "Verb", "Adjective"}
+    filtered_words = [word for word, pos in tokens if pos in allowed_pos]
+    
+    meaningful_words = [word for word in filtered_words if word not in stopwords or (word in stopwords and 'Adjective' in [pos for _, pos in tokens if _ == word])]
+    
+    incorrect_words = {"교대": "그대로","대하":"대하는","뚜정":"투정"}
+    meaningful_words = [incorrect_words.get(word,word) for word in meaningful_words]
+    
+    print("meaningful_words:", meaningful_words)
+    bigrams = generate_ngrams(" ".join(meaningful_words), n=2)
+    trigrams = generate_ngrams(" ".join(meaningful_words), n=3)
+    
+    return meaningful_words + bigrams + trigrams
+
+def preprocess_image(image_np):
+    gray_image = cv2.cvtColor(image_np, cv2.COLOR_BGR2GRAY)
+    blurred_image = cv2.GaussianBlur(gray_image, (5, 5), 0)
+    binary_image = cv2.adaptiveThreshold(
+        blurred_image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
+    )
+    contrast_image = cv2.convertScaleAbs(binary_image, alpha=1.5, beta=0)
+    return contrast_image
+    # return binary_image
+
+def generate_ngrams(text, n=2):
+    tokens = text.split()
+    ngrams = []
+    for i in range(len(tokens) - n + 1):
+        ngram = tokens[i:i + n]
+        if all(word not in stopwords for word in ngram):
+            ngrams.append(" ".join(ngram))
+    return ngrams
+
+def resize_image(image, scale=2.0):
+    height, width = image.shape[:2]
+    return cv2.resize(image, (int(width * scale), int(height * scale)), interpolation=cv2.INTER_LINEAR)
+
+
+def correct_image_orientation(image):
+    coords = cv2.findNonZero(cv2.bitwise_not(image))
+    angle = cv2.minAreaRect(coords)[-1]
+    if angle < -45:
+        angle = -(90 + angle)
+    else:
+        angle = -angle
+    (h, w) = image.shape[:2]
+    center = (w // 2, h // 2)
+    matrix = cv2.getRotationMatrix2D(center, angle, 1.0)
+    rotated = cv2.warpAffine(image, matrix, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+    return rotated
+
+
+def extract_keywords(image_url: str) -> List[str]:
     response = requests.get(image_url)
     image_bytes = BytesIO(response.content)
-    
-    # 이미지를 OpenCV 형식으로 변환 (easyocr는 numpy array를 받음)
     image_np = np.frombuffer(image_bytes.getvalue(), dtype=np.uint8)
-    #image_np = np.array(bytearray(image_bytes.read()), dtype=np.uint8)
     image = cv2.imdecode(image_np, cv2.IMREAD_COLOR)
     
-    # EasyOCR 리더 초기화
-    ocr = Reader(['en','ko'])  # 영어 OCR 리더 초기화
+    image = preprocess_image(image)
+    image = resize_image(image, scale=2.0)
+    image = correct_image_orientation(image)
+
+    ocr = Reader(['ko'])  #우선 한글
+    ocr_results = ocr.readtext(image, detail=1, paragraph=True) #이거는 easyocr일 경우
+    full_text = pytesseract.image_to_string(image, lang="kor",config="==psm 6")
+    extracted_text = []
+    for result in ocr_results:
+        if len(result) >= 2: 
+            text = result[1]
+            confidence = result[2] if len(result) > 2 else None 
+            if confidence is None or confidence > 0.7: 
+                extracted_text.append(text)
+    if full_text:
+        extracted_text.append(full_text)
+    full_text = " ".join(extracted_text)
+
+    print("Full Text:", full_text)
     
-    # OCR로 텍스트 추출
-    extracted_text = ocr.readtext(image, detail=0)
+    processed_text = preprocess_text(full_text)
+    if not processed_text:
+        return 0
     
-    # 텍스트 전처리
-    return preprocess_text(" ".join(extracted_text))
-# 키워드 업데이트 (테이블에 키워드 저장 및 빈도수 증가)
+    print("processed_text: ", processed_text)
+    keywords = filter_keywords(processed_text)
+    
+    print("Keywords:", keywords)
+    return keywords
+
+def filter_keywords(text: str) -> List[str]:
+    """TF-IDF를 기반으로 중요한 키워드 추출."""
+    if isinstance(text, list):
+        text = " ".join(text)
+    tfidf_vectorizer = TfidfVectorizer(
+        max_features=15,  #상위 몇개의 키워드로!
+        stop_words="english",
+        ngram_range=(1, 1) #단어만 취급하도록! 
+    )
+    tfidf_matrix = tfidf_vectorizer.fit_transform([text])
+    feature_names = tfidf_vectorizer.get_feature_names_out()
+    scores = tfidf_matrix.toarray().flatten()
+
+    keyword_scores = sorted(zip(feature_names, scores), key=lambda x: x[1], reverse=True)
+    filtered_keywords = [kw for kw, score in keyword_scores if score > 0.15 and len(kw) > 1]
+
+    return filtered_keywords
+
 def update_user_keywords(user_id: int, keywords: list, db: Session):
     keyword_counts = Counter(keywords)
     for keyword, count in keyword_counts.items():
         db_keyword = db.query(UserKeyword).filter_by(user_id=user_id, keyword=keyword).first()
         if db_keyword:
-            db_keyword.frequency += count  # 이미 키워드가 있으면 빈도수만 증가
+            db_keyword.frequency += count
         else:
-            # 새로운 키워드인 경우 삽입
             db.add(UserKeyword(user_id=user_id, keyword=keyword, frequency=count))
     db.commit()
 
-# 워드 클라우드 생성 및 S3에 업로드
+
 def create_wordcloud(user_id: int, db: Session):
-    # 사용자 키워드 가져오기
     keyword_data = db.query(UserKeyword).filter_by(user_id=user_id).all()
     keyword_counter = Counter({kw.keyword: kw.frequency for kw in keyword_data})
     
-    # 워드 클라우드 생성
-    wordcloud = WordCloud(font_path=font_path, width=800, height=400, background_color='white').generate_from_frequencies(keyword_counter)
+    wordcloud = WordCloud(font_path=font_path, width=800, height=400, background_color='white', color_func=random_named_color_func).generate_from_frequencies(keyword_counter)
 
-    # 임시 파일로 저장
     with NamedTemporaryFile(delete=False, suffix=".png") as tmp_file:
         wordcloud.to_file(tmp_file.name)
         tmp_file_path = tmp_file.name
 
-    # S3에 파일 업로드
     s3_file_name = f"wordclouds/{user_id}/wordcloud_{user_id}.png"
     s3_client.upload_file(
         tmp_file_path,
         BUCKET_NAME,
-        s3_file_name,
-        #ExtraArgs={"ACL": "public-read"}
+        s3_file_name
     )
 
-    # 로컬 임시 파일 삭제
     os.remove(tmp_file_path)
-
-    # Pre-signed URL 생성
-    def generate_presigned_url(bucket_name, object_key, expiration=3600):
-        try:
-            url = s3_client.generate_presigned_url('get_object',
-                                                   Params={'Bucket': bucket_name, 'Key': object_key},
-                                                   ExpiresIn=expiration)
-            return url
-        except Exception as e:
-            return str(e)
-    
-    # Pre-signed URL 반환
     image_url = generate_presigned_url(BUCKET_NAME, s3_file_name)
     return image_url
+
+def generate_presigned_url(bucket_name, object_key, expiration=3600):
+    try:
+        url = s3_client.generate_presigned_url('get_object',
+                                               Params={'Bucket': bucket_name, 'Key': object_key},
+                                               ExpiresIn=expiration)
+        return url
+    except Exception as e:
+        return str(e)
+
+def random_named_color_func(*args, **kwargs):
+    named_colors = list(mcolors.CSS4_COLORS.values())  # HTML/CSS 이름 기반 색상
+    return random.choice(named_colors)  # 무작위 색상 반환

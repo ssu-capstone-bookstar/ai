@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 from models import Member, MemberBook, Book
-from wordcloud_utils import extract_keywords, update_user_keywords, create_wordcloud
+from wordcloud_utils import extract_keywords, update_user_keywords, create_wordcloud, generate_presigned_url, BUCKET_NAME
 from schemas import UserRequest
 from db_connection import get_db
 from recommendation import recommend_books  
@@ -55,6 +55,19 @@ async def wordcloud_image(user_id: int, image_url: str, db: Session = Depends(ge
     
     update_user_keywords(user_id, keywords, db)
     
-    image_url = create_wordcloud(user_id, db)
+    image_url = create_wordcloud(user_id, db) 
     
-    return {"wordcloud_url": image_url}
+    return {"wordcloud_url": image_url}  
+    #return {"keyword":keywords} // 텍스트 확인용 
+
+
+@app.get('/generate-presigned-url') #프론트에서 이미지 url 필요할때 
+def get_presigned_url(user_id:int):
+    file_name = f"wordclouds/{user_id}/wordcloud_{user_id}.png"
+    presigned_url = generate_presigned_url(BUCKET_NAME, file_name)
+
+
+    if presigned_url:
+        return JSONResponse({'url': presigned_url})
+    else:
+        return JSONResponse({'error': 'Failed to generate presigned URL'}), 500
