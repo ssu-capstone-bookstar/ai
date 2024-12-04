@@ -35,7 +35,7 @@ class BookCategoryEnum(str, Enum):
 
 
 class Book(BaseModel):
-    book_id: int
+    alading_book_id: int
     title: str
     author: str
     book_category: BookCategoryEnum

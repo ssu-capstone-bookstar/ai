@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 from models import Member, MemberBook, Book
-from wordcloud_utils import extract_keywords, update_user_keywords, create_wordcloud, generate_presigned_url, BUCKET_NAME
+from wordcloud_utils import extract_keywords, update_user_keywords, create_wordcloud, generate_presigned_url, BUCKET_NAME, object_exists
 from schemas import UserRequest
 from db_connection import get_db
 from recommendation import recommend_books  
@@ -40,14 +40,14 @@ async def get_recommendations(user: UserRequest, db: Session = Depends(get_db)):
                 num_recommendations=10
             )
 
-        recommendation_titles = [book["book_id"] for book in recommendations]
-        return {"recommendations": recommendation_titles}
+        recommendation_data = [{"book_id":book["book_id"],"title":book["title"]} for book in recommendations]
+        return {"recommendations": recommendation_data}
 
     except Exception as e:
         logging.error(f"Error in get_recommendations: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
+#wordcloud 새로 업데이트 할 경우 == 스크랩했을 경우
 @app.post("/wordcloud-image")
 async def wordcloud_image(user_id: int, image_url: str, db: Session = Depends(get_db)):
     
@@ -60,12 +60,15 @@ async def wordcloud_image(user_id: int, image_url: str, db: Session = Depends(ge
     return {"wordcloud_url": image_url}  
     #return {"keyword":keywords} // 텍스트 확인용 
 
-
+#wordcloud 이미지 불러올 경우 
 @app.get('/generate-presigned-url') #프론트에서 이미지 url 필요할때 
 def get_presigned_url(user_id:int):
     file_name = f"wordclouds/{user_id}/wordcloud_{user_id}.png"
+    # S3에 해당 객체가 존재하는지 확인
+    if not object_exists(BUCKET_NAME, file_name):
+        return JSONResponse({'url': None})
+    
     presigned_url = generate_presigned_url(BUCKET_NAME, file_name)
-
 
     if presigned_url:
         return JSONResponse({'url': presigned_url})

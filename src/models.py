@@ -40,7 +40,7 @@ class Book(Base):
     __tablename__ = 'book'
     
     id = Column(BigInteger, primary_key=True, autoincrement=True)
-    book_id = Column(BigInteger, unique=True)
+    alading_book_id = Column(BigInteger, unique=True)
     page = Column(Integer)
     published_date = Column(DateTime)
     toc = Column(Integer)
@@ -84,7 +84,7 @@ class MemberBook(Base):
     reading_status = Column(Enum(ReadingStatus))
 
     member_id = Column(BigInteger, ForeignKey('member.id'))
-    book_id = Column(BigInteger, ForeignKey('book.book_id'))
+    book_id = Column(BigInteger, ForeignKey('book.alading_book_id'))
 
     member = relationship('Member', back_populates='member_books')
     book = relationship('Book', back_populates='member_books')

@@ -14,22 +14,19 @@ from nltk.util import ngrams
 from typing import List
 from sklearn.feature_extraction.text import TfidfVectorizer
 from matplotlib import colors as mcolors
-
+from dotenv import load_dotenv
+load_dotenv()
 okt = Okt()
-# AWS S3 환경 설정
-AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
-AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
-AWS_REGION = os.getenv("AWS_REGION", "ap-northeast-2")
-BUCKET_NAME = os.getenv("BUCKET_NAME", "wordcloudforsave")
-pytesseract.pytesseract.tesseract_cmd = r"C:\\Program Files\\Tesseract-OCR\\tesseract.exe" #윈도우에서만 추가 필요 
+BUCKET_NAME = os.getenv("BUCKET_NAME", "savewordcloud")
+
+#pytesseract.pytesseract.tesseract_cmd = r"C:\\Program Files\\Tesseract-OCR\\tesseract.exe" #윈도우에서만 추가 필요 
+
 s3_client = boto3.client(
-    "s3",
-    aws_access_key_id=AWS_ACCESS_KEY_ID,
-    aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-    region_name=AWS_REGION,
+    "s3"
 )
+
 ocr = easyocr.Reader(['ko'],gpu=False)
-font_path = "C:\\Users\\kelly\\Documents\\AI\\nanum-all\\NanumGothic.ttf"
+font_path = "/usr/share/fonts/truetype/myfonts/myfont.ttf" #"C:\\Users\\kelly\\Documents\\AI\\nanum-all\\NanumGothic.ttf" 
 stopwords = {"은", "는", "이", "가", "의", "에", "을", "에서", "도", "로", "으로", "와", "과", 
              "한", "하다", "들", "위한", "으로부터", "라도", "하고", "그리고", "때문에", "하지만","싶다","달리","어단","어름","않는","않은"}
 
@@ -186,5 +183,12 @@ def generate_presigned_url(bucket_name, object_key, expiration=3600):
         return str(e)
 
 def random_named_color_func(*args, **kwargs):
-    named_colors = list(mcolors.CSS4_COLORS.values())  # HTML/CSS 이름 기반 색상
-    return random.choice(named_colors)  # 무작위 색상 반환
+    named_colors = list(mcolors.CSS4_COLORS.values())  # HTML/CSS 기반 색상
+    return random.choice(named_colors)  # 랜덤 색상 
+
+def object_exists(bucket_name, object_key):
+    try:
+        s3_client.head_object(Bucket=bucket_name, Key=object_key)
+        return True
+    except s3_client.exceptions.ClientError:
+        return False
