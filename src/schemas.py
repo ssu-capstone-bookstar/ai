@@ -42,7 +42,7 @@ class Book(BaseModel):
     description: Optional[str] = None
     publisher: Optional[str] = None
     published_date: Optional[datetime] = None
-
+    image_url: Optional[str] =None
     class Config:
         from_attributes = True  
 

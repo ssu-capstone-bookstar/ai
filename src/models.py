@@ -53,7 +53,8 @@ class Book(Base):
     publisher = Column(String(255))
     title = Column(String(255))
     book_category = Column(Enum(BookCategory))
-
+    image_url = Column(String(255))
+    
     member_books = relationship('MemberBook', back_populates='book')
 
 class Member(Base):

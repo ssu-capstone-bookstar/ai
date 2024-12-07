@@ -40,7 +40,7 @@ async def get_recommendations(user: UserRequest, db: Session = Depends(get_db)):
                 num_recommendations=10
             )
 
-        recommendation_data = [{"book_id":book["book_id"],"title":book["title"]} for book in recommendations]
+        recommendation_data = [{"book_id":book["book_id"],"title":book["title"],"image_url":book["image_url"]} for book in recommendations]
         return {"recommendations": recommendation_data}
 
     except Exception as e:

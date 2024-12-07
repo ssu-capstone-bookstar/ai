@@ -116,12 +116,12 @@ def recommend_books(db: Session, user_id: int, read_list: List[str], want_list: 
         # logging.error("No books found in the database.")
         return []
     
-    df = pd.DataFrame([{"book_id": book.id, "title": book.title, "author": book.author, "book_category": book.book_category} for book in books])
+    df = pd.DataFrame([{"book_id": book.id, "title": book.title, "author": book.author, "book_category": book.book_category, "image_url":book.image_url} for book in books])
     
 
     if not read_list and not want_list:
         random_books = random.sample(range(len(df)), min(num_recommendations, len(df)))
-        return df.iloc[random_books][["book_id", 'title', 'author', 'book_category']].to_dict(orient='records')
+        return df.iloc[random_books][["book_id", 'title', 'author', 'book_category','image_url']].to_dict(orient='records')
 
     read_categories = get_user_preference_categories(db, read_list)
     want_categories = get_user_preference_categories(db, want_list)
@@ -178,4 +178,4 @@ def recommend_books(db: Session, user_id: int, read_list: List[str], want_list: 
 
     # 최종 추천 
     final_recommendations = final_recommendations.head(num_recommendations)
-    return final_recommendations[['book_id', 'title', 'author', 'book_category']].to_dict(orient='records')
+    return final_recommendations[['book_id', 'title', 'author', 'book_category','image_url']].to_dict(orient='records')
