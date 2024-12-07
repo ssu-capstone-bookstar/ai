@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, UploadFile
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from models import Member, MemberBook, Book
 from wordcloud_utils import extract_keywords, update_user_keywords, create_wordcloud, generate_presigned_url, BUCKET_NAME, object_exists
@@ -49,15 +49,15 @@ async def get_recommendations(user: UserRequest, db: Session = Depends(get_db)):
 
 #wordcloud 새로 업데이트 할 경우 == 스크랩했을 경우
 @app.post("/wordcloud-image")
-async def wordcloud_image(user_id: int, image_url: str, db: Session = Depends(get_db)):
+async def wordcloud_image(user_id: int, image_file: UploadFile = File(...), db: Session = Depends(get_db)):
     
-    keywords = extract_keywords(image_url)
+    keywords = extract_keywords(image_file)
     
     update_user_keywords(user_id, keywords, db)
     
     image_url = create_wordcloud(user_id, db) 
     
-    return {"wordcloud_url": image_url}  
+    return {"message": "Wordcloud image successfully created and uploaded."}  
     #return {"keyword":keywords} // 텍스트 확인용 
 
 #wordcloud 이미지 불러올 경우 

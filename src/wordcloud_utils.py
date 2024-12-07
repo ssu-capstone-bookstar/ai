@@ -15,6 +15,9 @@ from typing import List
 from sklearn.feature_extraction.text import TfidfVectorizer
 from matplotlib import colors as mcolors
 from dotenv import load_dotenv
+from fastapi import UploadFile
+from io import BytesIO
+from PIL import Image
 load_dotenv()
 okt = Okt()
 BUCKET_NAME = os.getenv("BUCKET_NAME", "savewordcloud")
@@ -87,9 +90,8 @@ def correct_image_orientation(image):
     return rotated
 
 
-def extract_keywords(image_url: str) -> List[str]:
-    response = requests.get(image_url)
-    image_bytes = BytesIO(response.content)
+def extract_keywords(image_file: UploadFile) -> List[str]:
+    image_bytes = BytesIO(image_file.file.read())
     image_np = np.frombuffer(image_bytes.getvalue(), dtype=np.uint8)
     image = cv2.imdecode(image_np, cv2.IMREAD_COLOR)
     
@@ -170,8 +172,7 @@ def create_wordcloud(user_id: int, db: Session):
     )
 
     os.remove(tmp_file_path)
-    image_url = generate_presigned_url(BUCKET_NAME, s3_file_name)
-    return image_url
+    
 
 def generate_presigned_url(bucket_name, object_key, expiration=3600):
     try:
