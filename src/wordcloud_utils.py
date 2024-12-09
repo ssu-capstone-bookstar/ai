@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 from fastapi import UploadFile
 from io import BytesIO
 from PIL import Image
+from botocore.config import Config
 load_dotenv()
 okt = Okt()
 BUCKET_NAME = os.getenv("BUCKET_NAME", "savewordcloud")
@@ -25,7 +26,9 @@ BUCKET_NAME = os.getenv("BUCKET_NAME", "savewordcloud")
 #pytesseract.pytesseract.tesseract_cmd = r"C:\\Program Files\\Tesseract-OCR\\tesseract.exe" #윈도우에서만 추가 필요 
 
 s3_client = boto3.client(
-    "s3"
+    "s3",
+    region_name='ap-northeast-2',
+    config=Config(signature_version='s3v4')
 )
 
 ocr = easyocr.Reader(['ko'],gpu=False)
@@ -158,7 +161,7 @@ def create_wordcloud(user_id: int, db: Session):
     keyword_data = db.query(UserKeyword).filter_by(user_id=user_id).all()
     keyword_counter = Counter({kw.keyword: kw.frequency for kw in keyword_data})
     
-    wordcloud = WordCloud(font_path=font_path, width=800, height=400, background_color='white', color_func=random_named_color_func).generate_from_frequencies(keyword_counter)
+    wordcloud = WordCloud(font_path=font_path, width=230, height=100, background_color='white', color_func=random_named_color_func).generate_from_frequencies(keyword_counter)
 
     with NamedTemporaryFile(delete=False, suffix=".png") as tmp_file:
         wordcloud.to_file(tmp_file.name)

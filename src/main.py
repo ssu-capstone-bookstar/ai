@@ -4,11 +4,23 @@ from models import Member, MemberBook, Book
 from wordcloud_utils import extract_keywords, update_user_keywords, create_wordcloud, generate_presigned_url, BUCKET_NAME, object_exists
 from schemas import UserRequest
 from db_connection import get_db
-from recommendation import recommend_books  
+from recommendation import recommend_books 
+from typing import List 
 import logging
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 logging.basicConfig(level=logging.INFO)
 app = FastAPI()
+
+# CORS 설정 추가
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://127.0.0.1:9101"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 @app.post("/recommend_books")
 async def get_recommendations(user: UserRequest, db: Session = Depends(get_db)):
@@ -40,8 +52,8 @@ async def get_recommendations(user: UserRequest, db: Session = Depends(get_db)):
                 num_recommendations=10
             )
 
-        recommendation_data = [{"book_id":book["book_id"],"title":book["title"],"image_url":book["image_url"]} for book in recommendations]
-        return {"recommendations": recommendation_data}
+        #recommendation_data = [{"book_id":book["book_id"],"title":book["title"],"image_url":book["image_url"]} for book in recommendations]
+        return {"recommendations": recommendations}
 
     except Exception as e:
         logging.error(f"Error in get_recommendations: {e}")

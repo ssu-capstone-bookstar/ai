@@ -89,7 +89,7 @@ def get_user_preference_categories(db: Session, book_ids: List[str]) -> Dict[str
     return category_scores
 
 
-def get_similar_users(db: Session, read_list: List[str], user_id: int, num_similar_users=4):
+def get_similar_users(db: Session, read_list: List[str], user_id: int, num_similar_users=2):
     users_books = db.query(Member.id, MemberBook.book_id).join(MemberBook, Member.id == MemberBook.member_id).all()
     user_data = {uid: set() for uid, _ in users_books}
     for uid, book_id in users_books:
