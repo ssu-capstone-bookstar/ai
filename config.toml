@@ -1,0 +1,8 @@
+# AWS와 Database 설정은 모두 .env.toml에서 관리합니다
+
+[app]
+cors_origins = ["http://127.0.0.1:9101"]
+log_level = "INFO"
+title = "BookStar AI"
+description = "AI 기반 도서 추천 시스템"
+version = "1.0.0" 
