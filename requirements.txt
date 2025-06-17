@@ -4,10 +4,14 @@ annotated-types==0.7.0
     # via pydantic
 anyio==4.9.0
     # via starlette
+cffi==1.17.1 ; platform_python_implementation != 'PyPy'
+    # via cryptography
 click==8.2.1
     # via uvicorn
 colorama==0.4.6 ; sys_platform == 'win32'
     # via click
+cryptography==45.0.4
+    # via ai (pyproject.toml)
 fastapi==0.115.12
     # via ai (pyproject.toml)
 filelock==3.18.0
@@ -37,6 +41,8 @@ numpy==2.3.0
     #   scipy
 pandas==2.3.0
     # via ai (pyproject.toml)
+pycparser==2.22 ; platform_python_implementation != 'PyPy'
+    # via cffi
 pydantic==2.11.7
     # via fastapi
 pydantic-core==2.33.2
@@ -51,7 +57,7 @@ scikit-learn==1.7.0
     # via ai (pyproject.toml)
 scipy==1.15.3
     # via scikit-learn
-setuptools==80.9.0 ; (python_full_version >= '3.12' and platform_machine != 'x86_64') or (python_full_version >= '3.12' and sys_platform != 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')
+setuptools==80.9.0 ; python_full_version >= '3.12'
     # via torch
 six==1.17.0
     # via python-dateutil
@@ -67,7 +73,10 @@ threadpoolctl==3.6.0
     # via scikit-learn
 toml==0.10.2
     # via ai (pyproject.toml)
-torch==2.7.1
+torch==2.7.1 ; sys_platform != 'linux'
+    # via ai (pyproject.toml)
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.7.1 ; sys_platform == 'linux'
     # via ai (pyproject.toml)
 typing-extensions==4.14.0
     # via

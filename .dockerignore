@@ -57,9 +57,6 @@ README_old.md
 .env.toml.template
 requirements-dev.txt
 
-# 민감한 정보 (실제 환경 설정)
-.env.toml
-
 # 로그 및 임시 파일
 *.log
 logs/

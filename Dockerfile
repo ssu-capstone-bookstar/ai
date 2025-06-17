@@ -16,7 +16,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
 # 프로젝트 설정 파일 복사
-COPY pyproject.toml .
+COPY .env.toml .
 COPY config.toml .
 
 # 애플리케이션 코드 복사
