@@ -10,7 +10,7 @@ from bookstar.main import app
 
 # 로깅 설정
 logging.basicConfig(
-    level=getattr(logging, settings.app['log_level']),
+    level=getattr(logging, settings.logging['level']),
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 
@@ -20,9 +20,9 @@ def main():
     """
     uvicorn.run(
         app,
-        host="0.0.0.0",
-        port=8000,
-        log_level=settings.app['log_level'].lower()
+        host=settings.server['host'],
+        port=settings.server['port'],
+        log_level=settings.logging['level'].lower()
     )
 
 if __name__ == "__main__":

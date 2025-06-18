@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  ai-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: docker-ai-server
+    container_name: ai-server
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./logs:/app/logs
+    depends_on:
+      - mysql
+    restart: unless-stopped 

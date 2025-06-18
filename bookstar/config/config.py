@@ -92,7 +92,91 @@ class Settings:
         app_config = self._config.get('app', {})
         return {
             'cors_origins': app_config.get('cors_origins', ["*"]),
-            'log_level': os.getenv('LOG_LEVEL', app_config.get('log_level', 'INFO'))
+            'title': app_config.get('title', 'BookStar AI'),
+            'description': app_config.get('description', 'AI 기반 도서 추천 시스템'),
+            'version': app_config.get('version', '1.0.0')
+        }
+        
+    @property
+    def server(self) -> dict[str, Any]:
+        """서버 설정"""
+        server_config = self._config.get('server', {})
+        return {
+            'host': os.getenv('SERVER_HOST', server_config.get('host', '0.0.0.0')),
+            'port': int(os.getenv('SERVER_PORT', str(server_config.get('port', 8000))))
+        }
+        
+    @property
+    def recommendation(self) -> dict[str, Any]:
+        """추천 시스템 설정"""
+        rec_config = self._config.get('recommendation', {})
+        return {
+            'default_recommendations_count': rec_config.get(
+                'default_recommendations_count', 10
+            ),
+            'similar_users_count': rec_config.get('similar_users_count', 3),
+            'content_weight': rec_config.get('content_weight', 0.7),
+            'collaborative_weight': rec_config.get('collaborative_weight', 0.3),
+            # 사용자 선호도 계산 가중치
+            'read_book_weight': rec_config.get('read_book_weight', 0.7),
+            'unread_book_weight': rec_config.get('unread_book_weight', 1.0),
+            'category_preference_weight': rec_config.get(
+                'category_preference_weight', 2.0
+            ),
+            'author_preference_weight': rec_config.get(
+                'author_preference_weight', 1.5
+            ),
+            # PyTorch 모델 훈련 설정
+            'num_epochs': rec_config.get('num_epochs', 300),
+            'learning_rate': rec_config.get('learning_rate', 0.122)
+        }
+    
+    @property
+    def logging(self) -> dict:
+        """로깅 관련 설정"""
+        logging_config = self._config.get('logging', {})
+        
+        return {
+            'level': os.getenv('LOG_LEVEL', logging_config.get('level', 'INFO')),
+            'use_json': logging_config.get('use_json', False),
+            'enable_console': logging_config.get('enable_console', True),
+            'log_dir': logging_config.get('log_dir', 'logs'),
+            'performance_threshold_ms': logging_config.get(
+                'performance_threshold_ms', 100
+            ),
+            'max_file_size_mb': logging_config.get('max_file_size_mb', 10),
+            'backup_count': logging_config.get('backup_count', 5),
+            'enable_access_log': logging_config.get('enable_access_log', True),
+            'enable_performance_log': logging_config.get(
+                'enable_performance_log', True
+            ),
+            'enable_traceback_log': logging_config.get(
+                'enable_traceback_log', True
+            ),
+            # 직관적인 임계값 설정
+            'db_threshold_ms': logging_config.get('db_query_threshold_ms', 50),
+            'api_threshold_ms': logging_config.get(
+                'api_processing_threshold_ms', 200
+            ),
+            'heavy_threshold_ms': logging_config.get(
+                'heavy_computation_threshold_ms', 500
+            ),
+            # 로그 파일 로테이션 설정 (모든 로그에 일관된 보관 정책)
+            'main_log_retention_days': logging_config.get(
+                'main_log_retention_days', 14
+            ),
+            'error_log_retention_days': logging_config.get(
+                'error_log_retention_days', 30
+            ),
+            'access_log_retention_days': logging_config.get(
+                'access_log_retention_days', 7
+            ),
+            'performance_log_retention_days': logging_config.get(
+                'performance_log_retention_days', 10
+            ),
+            'traceback_log_retention_days': logging_config.get(
+                'traceback_log_retention_days', 60
+            )
         }
 
 

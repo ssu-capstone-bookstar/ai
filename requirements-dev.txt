@@ -86,7 +86,10 @@ pymysql==1.1.1
 pytest==8.4.0
     # via
     #   ai (pyproject.toml:dev)
+    #   pytest-asyncio
     #   pytest-cov
+pytest-asyncio==1.0.0
+    # via ai (pyproject.toml)
 pytest-cov==6.2.1
     # via ai (pyproject.toml:dev)
 python-dateutil==2.9.0.post0
