@@ -156,8 +156,8 @@ def test_log_directory_creation():
         assert not log_dir.exists()
         
         try:
-            # 새로운 LoggingConfig 인스턴스로 테스트
-            test_config = LoggingConfig(log_dir=str(log_dir))
+            # 새로운 LoggingConfig 인스턴스로 테스트 (디렉토리 자동 생성 확인용)
+            _ = LoggingConfig(log_dir=str(log_dir))
             
             # 로그 디렉토리가 생성되었는지 확인 (LoggingConfig 초기화 시 자동 생성)
             assert log_dir.exists()
