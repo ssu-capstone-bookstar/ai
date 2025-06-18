@@ -9,9 +9,7 @@ cffi==1.17.1 ; platform_python_implementation != 'PyPy'
 click==8.2.1
     # via uvicorn
 colorama==0.4.6 ; sys_platform == 'win32'
-    # via
-    #   click
-    #   pytest
+    # via click
 cryptography==45.0.4
     # via ai (pyproject.toml)
 fastapi==0.115.12
@@ -26,8 +24,6 @@ h11==0.16.0
     # via uvicorn
 idna==3.10
     # via anyio
-iniconfig==2.1.0
-    # via pytest
 jinja2==3.1.6
     # via torch
 joblib==1.5.1
@@ -43,25 +39,15 @@ numpy==2.3.0
     #   pandas
     #   scikit-learn
     #   scipy
-packaging==25.0
-    # via pytest
 pandas==2.3.0
     # via ai (pyproject.toml)
-pluggy==1.6.0
-    # via pytest
 pycparser==2.22 ; platform_python_implementation != 'PyPy'
     # via cffi
 pydantic==2.11.7
     # via fastapi
 pydantic-core==2.33.2
     # via pydantic
-pygments==2.19.1
-    # via pytest
 pymysql==1.1.1
-    # via ai (pyproject.toml)
-pytest==8.4.0
-    # via pytest-asyncio
-pytest-asyncio==1.0.0
     # via ai (pyproject.toml)
 python-dateutil==2.9.0.post0
     # via pandas
