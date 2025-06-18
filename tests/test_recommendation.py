@@ -157,10 +157,6 @@ def test_recommend_books_function():
         # Mock content-based recommendations
         content_df = pd.DataFrame([{
             'book_id': 'content1',
-            'title': '콘텐츠 추천1',
-            'author': '작가1',
-            'book_category': '소설',
-            'image_url': 'content1.jpg',
             'total_weight': 0.8
         }])
         mock_service.get_content_based_recommendations.return_value = content_df
@@ -168,10 +164,6 @@ def test_recommend_books_function():
         # Mock collaborative recommendations
         collab_df = pd.DataFrame([{
             'book_id': 'collab1',
-            'title': '협업 추천1',
-            'author': '작가2',
-            'book_category': '과학',
-            'image_url': 'collab1.jpg',
             'total_weight': 0.7
         }])
         mock_service.get_collaborative_recommendations.return_value = collab_df
@@ -188,9 +180,8 @@ def test_recommend_books_function():
         if recommendations:
             rec = recommendations[0]
             assert 'book_id' in rec
-            assert 'title' in rec
-            assert 'author' in rec
-            assert 'book_category' in rec
+            # 새로운 응답 형태에서는 book_id만 포함됨
+            assert len(rec) == 1
 
 
 def test_get_similar_users_function():
@@ -289,10 +280,6 @@ def test_different_recommendation_counts(num_recommendations):
         # 충분한 수의 Mock 추천 결과 생성
         content_df = pd.DataFrame([{
             'book_id': f'content{i}',
-            'title': f'콘텐츠{i}',
-            'author': f'작가{i}',
-            'book_category': '소설',
-            'image_url': f'content{i}.jpg',
             'total_weight': 0.8 - i * 0.1
         } for i in range(num_recommendations)])
         

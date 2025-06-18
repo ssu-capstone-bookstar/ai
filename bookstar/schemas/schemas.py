@@ -97,3 +97,10 @@ class UserKeyword(BaseModel):
     frequency: int = 1  # 키워드 빈도수
     created_date: datetime  # 생성 일자
     updated_date: datetime  # 수정 일자
+
+
+class SimpleRecommendationResult(BaseModel):
+    """간단한 추천 결과 응답 스키마"""
+    model_config = ConfigDict(from_attributes=True)
+    
+    book_id: int

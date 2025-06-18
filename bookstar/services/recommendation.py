@@ -127,22 +127,28 @@ class RecommendationService:
             logger.info(f"사용자 {user_id}의 선호도 정보가 없어 랜덤 추천으로 전환")
             return self._get_random_books(num_recommendations)
         
-        # 효율적인 책 데이터 조회 (필요한 컬럼만)
+        # 효율적인 책 데이터 조회 (id 컬럼만)
         books_query = (
             self.db.query(
-                Book.alading_book_id,
-                Book.title,
-                Book.author,
-                Book.book_category,
-                Book.image_url
+                Book.id,
+                Book.alading_book_id
             )
         )
         
         # 이미 읽은 책 제외
         read_list, want_list = self.get_user_books_data(user_id)
         if read_list or want_list:
+            # aladin_book_id를 id로 매핑
+            aladin_book_ids_int = [int(bid) for bid in read_list + want_list]
+            book_id_mapping = (
+                self.db.query(Book.id, Book.alading_book_id)
+                .filter(Book.alading_book_id.in_(aladin_book_ids_int))
+                .all()
+            )
+            book_ids_to_exclude = [book.id for book in book_id_mapping]
+            
             books_query = books_query.filter(
-                ~Book.alading_book_id.in_(read_list + want_list)
+                ~Book.id.in_(book_ids_to_exclude)
             )
         
         books_data = books_query.all()
@@ -152,25 +158,46 @@ class RecommendationService:
         
         # DataFrame 생성
         df = pd.DataFrame([{
-            "book_id": book.alading_book_id,
-            "title": book.title,
-            "author": book.author,
-            "book_category": book.book_category,
-            "image_url": book.image_url
+            "book_id": book.id,
+            "alading_book_id": book.alading_book_id
         } for book in books_data])
+        
+        # 가중치 계산을 위한 책 정보 조회
+        book_info_query = (
+            self.db.query(
+                Book.id,
+                Book.book_category,
+                Book.author
+            )
+            .filter(Book.id.in_(df['book_id'].tolist()))
+        )
+        
+        book_info_data = book_info_query.all()
+        book_info_dict = {
+            book.id: {'category': book.book_category, 'author': book.author} 
+            for book in book_info_data
+        }
         
         # 가중치 계산 (벡터화)
         category_weights: dict[str, float] = preferences.get('categories', {})
         author_weights: dict[str, float] = preferences.get('authors', {})
         
-        df['category_weight'] = df['book_category'].map(
+        df['category_weight'] = df['book_id'].map(
             lambda x: (
-                category_weights.get(x.value if x else '', 0) 
-                if pd.notna(x) else 0
+                category_weights.get(
+                    book_info_dict.get(x, {}).get('category', {}).value 
+                    if book_info_dict.get(x, {}).get('category') else '', 
+                    0
+                ) 
+                if book_info_dict.get(x) else 0
             )
         )
-        df['author_weight'] = df['author'].map(
-            lambda x: author_weights.get(x if x else '', 0) if pd.notna(x) else 0
+        df['author_weight'] = df['book_id'].map(
+            lambda x: (
+                author_weights.get(book_info_dict.get(x, {}).get('author', ''), 0) 
+                if (book_info_dict.get(x) and 
+                    book_info_dict.get(x, {}).get('author')) else 0
+            )
         )
         df['total_weight'] = df['category_weight'] + df['author_weight']
         
@@ -181,11 +208,7 @@ class RecommendationService:
         """랜덤 책 추천"""
         books = (
             self.db.query(
-                Book.alading_book_id,
-                Book.title,
-                Book.author,
-                Book.book_category,
-                Book.image_url
+                Book.id
             )
             .order_by(func.random())
             .limit(num_recommendations)
@@ -193,11 +216,7 @@ class RecommendationService:
         )
         
         return pd.DataFrame([{
-            "book_id": book.alading_book_id,
-            "title": book.title,
-            "author": book.author,
-            "book_category": book.book_category,
-            "image_url": book.image_url
+            "book_id": book.id
         } for book in books])
     
     def get_similar_users(
@@ -338,14 +357,11 @@ class RecommendationService:
         if not book_ids:
             return pd.DataFrame()
         
-        # 책 정보 조회
+        # 책 정보 조회 (id만 필요)
         books = (
             self.db.query(
-                Book.alading_book_id,
-                Book.title,
-                Book.author,
-                Book.book_category,
-                Book.image_url
+                Book.id,
+                Book.alading_book_id
             )
             .filter(Book.alading_book_id.in_(book_ids))
             .limit(num_recommendations)
@@ -353,11 +369,7 @@ class RecommendationService:
         )
         
         return pd.DataFrame([{
-            "book_id": book.alading_book_id,
-            "title": book.title,
-            "author": book.author,
-            "book_category": book.book_category,
-            "image_url": book.image_url
+            "book_id": book.id
         } for book in books])
 
 def get_cached_model(db: Session, cache_key: str) -> RecommenderModel | None:
@@ -452,7 +464,7 @@ def recommend_books(
         )
         
         return final_recommendations[
-            ['book_id', 'title', 'author', 'book_category', 'image_url']
+            ['book_id']
         ].to_dict(orient='records')
         
     except Exception as e:
@@ -466,7 +478,7 @@ def recommend_books(
         service = RecommendationService(db)
         random_books = service._get_random_books(num_recommendations)
         return random_books[
-            ['book_id', 'title', 'author', 'book_category', 'image_url']
+            ['book_id']
         ].to_dict(orient='records')
 
 # 하위 호환성을 위한 기존 함수들 (deprecated)
@@ -534,3 +546,4 @@ def get_similar_users(
         "RecommendationService를 사용하세요."
     )
     return []
+

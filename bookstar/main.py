@@ -10,7 +10,7 @@ from bookstar.config import settings
 from bookstar.config.logging_config import logging_config
 from bookstar.database.connection import get_db
 from bookstar.models.models import MemberBook
-from bookstar.schemas.schemas import UserRequest
+from bookstar.schemas.schemas import SimpleRecommendationResult, UserRequest
 from bookstar.services.recommendation import recommend_books
 from bookstar.utils.decorators import log_async_execution_time
 
@@ -129,7 +129,10 @@ async def log_requests(request: Request, call_next):
         raise
 
 
-@app.post("/recommend_books")
+@app.post(
+    "/recommend_books", 
+    response_model=dict[str, list[SimpleRecommendationResult]]
+)
 @log_async_execution_time(threshold_ms=settings.logging['performance_threshold_ms'])
 async def get_recommendations(user: UserRequest, db: Session = Depends(get_db)):
     """도서 추천 API 엔드포인트"""

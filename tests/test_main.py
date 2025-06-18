@@ -32,6 +32,5 @@ def test_recommend_books_endpoint():
     if recommendations:  # 추천 결과가 있는 경우
         first_recommendation = recommendations[0]
         assert "book_id" in first_recommendation
-        assert "title" in first_recommendation
-        assert "author" in first_recommendation
-        assert "book_category" in first_recommendation 
+        # 새로운 응답 형태에서는 book_id만 포함됨
+        assert len(first_recommendation) == 1 
