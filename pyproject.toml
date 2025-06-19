@@ -1,0 +1,54 @@
+[project]
+name = "ai"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "cryptography>=45.0.4",
+    "fastapi>=0.115.12",
+    "pandas>=2.3.0",
+    "pymysql>=1.1.1",
+    "scikit-learn>=1.7.0",
+    "sqlalchemy>=2.0.41",
+    "toml>=0.10.2",
+    "torch>=2.7.1",
+    "uvicorn>=0.34.3",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "mypy>=1.16.0",
+    "pytest>=8.4.0",
+    "pytest-asyncio>=1.0.0",
+    "pytest-cov>=6.2.1",
+    "ruff>=0.11.13",
+]
+
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cpu", marker = "sys_platform == 'linux'" }
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "I", "UP", "C90", "A", "T20"]
+ignore = ["B008"]  # FastAPI Depends 사용을 위해 B008 무시
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = false
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+
+# 특정 오류 타입 무시
+disable_error_code = ["import-untyped", "no-any-return"]

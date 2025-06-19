@@ -1,10 +1,108 @@
+# Git 관련
+.git
+.gitignore
+.gitattributes
+
+# Python 관련
 __pycache__
 *.pyc
 *.pyo
 *.pyd
-*.db
-*.sqlite3
+.Python
+*.so
+.tox
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.pytest_cache
+
+# 가상환경
+venv/
+env/
+ENV/
+.venv/
+.env/
+
+# IDE 관련
 .vscode/
 .idea/
-*.git
-venv/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# 로그 파일 (컨테이너에서 새로 생성)
+logs/
+*.log
+
+# 테스트 관련
+.pytest_cache/
+.coverage
+htmlcov/
+
+# 개발용 파일
+README.md
+LOGGING_GUIDE.md
+docker-run.sh
+docker-compose.yml
+.dockerignore
+
+# 예제 파일
+examples/
+
+# 임시 파일
+*.tmp
+*.temp
+.tmp/
+
+# 빌드 아티팩트
+build/
+dist/
+*.egg-info/
+
+# 패키지 관리
+uv.lock
+
+# 테스트
+htmlcov/
+tests/
+
+# 코드 품질 도구
+.ruff_cache/
+.mypy_cache/
+
+# 운영체제
+# Linux
+.directory
+
+# 개발 전용 파일
+.env.toml.template
+requirements-dev.txt
+
+# 데이터베이스 (로컬 개발용)
+*.db
+*.sqlite
+*.sqlite3
+
+# 모델 파일 (용량이 큰 경우)
+*.pkl
+*.pt
+*.pth
+
+# Docker 관련
+Dockerfile*
+docker-compose*.yml
+
